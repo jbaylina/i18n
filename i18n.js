@@ -102,10 +102,10 @@
                     prefix = match[1],
                     locale = match[4],
                     suffix = match[5],
-                    parts = locale.split("-"),
+                    parts,
                     toLoad = [],
                     value = {},
-                    i, part, current = "";
+                    l, i, part, current = "";
 
                 //If match[5] is blank, it means this is the top bundle definition,
                 //so it does not have to be handled. Locale-specific requests
@@ -125,7 +125,6 @@
                             (navigator.language ||
                              navigator.userLanguage || "root").toLowerCase();
                     }
-                    parts = locale.split("-");
                 }
 
                 if (config.isBuild) {
@@ -133,10 +132,19 @@
                     //require them if exist.
                     toLoad.push(masterName);
                     addIfExists(req, "root", toLoad, prefix, suffix);
-                    for (i = 0; i < parts.length; i++) {
-                        part = parts[i];
-                        current += (current ? "-" : "") + part;
-                        addIfExists(req, current, toLoad, prefix, suffix);
+
+                    // In build mode, accept config.locale to be an array, so we can load 
+                    // all the languages defined in this array.
+                    var locales = (locale instanceof Array) ? locale : [locale];
+
+                    for (l = 0; l < locales.length; l++) {
+                        parts = locales[l].split("-");
+                        current="";
+	                    for (i = 0; i < parts.length; i++) {
+	                        part = parts[i];
+	                        current += (current ? "-" : "") + part;
+	                        addIfExists(req, current, toLoad, prefix, suffix);
+	                    }
                     }
 
                     req(toLoad, function () {
@@ -144,6 +152,8 @@
                     });
                 } else {
                     //First, fetch the master bundle, it knows what locales are available.
+                    if (locale instanceof Array) locale = locale[0];
+                    parts = locale.split("-");
                     req([masterName], function (master) {
                         //Figure out the best fit
                         var needed = [],
